@@ -1,7 +1,7 @@
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("ip", nargs="?", default=None, type=str)
+parser = argparse.ArgumentParser(usage="python %(prog)s ipaddress")
+parser.add_argument("ip", nargs="?", default=None, type=str, help="Enter an abreviated IPv6 address")
 
 def multiZero(ip):
     half = ip.split('::')
@@ -37,5 +37,7 @@ if __name__ == '__main__':
     if args.ip:
         if '::' in args.ip: multiZero(args.ip)
         else: singleZero(args.ip)
-    else: print("IP missing or misformatted please try again")
+    else: 
+        print(" --- IP missing or misformatted please try again ---\n")
+        parser.print_help()
 
