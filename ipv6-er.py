@@ -12,9 +12,8 @@ def multiZero(ip):
     insert = ''
     for i in range((8 -total)):
         insert = insert + '0000:'
-    print insert
     ip = ip.replace('::',(':' + insert))
-    print ip
+    addrType(ip)
     singleZero(ip)
 
 
@@ -29,7 +28,19 @@ def singleZero(ip):
         else: octet = item
         full = str(full) + str(octet) + ':'
 
-    print("Full IP - " + str(full).strip(':'))
+def addrType(ip):
+    firstOct = ip.split(':')[0].lower()
+    if firstOct == 'fe80': print("This is a LAN IP!")
+    if firstOct == 'fc00': print("This is an automatically generated IP that is unroutable!")
+    if firstOct == 'ff00': print("This is a multicast address!")
+    if firstOct == '2000': print("This is a global unicast address!")
+    if firstOct == '3ffe' or firstOct == 'fec0': print("This address is depricated!")
+    if '2001:db8:' in ip.lower(): print("Unroutable documentation example IP!")
+    if '2001:0:' in ip.lower(): print("This is a Teredo tunnel IP!")
+    if firstOct == '2002': print("This is an IPv6 -> IPv4 conversion IP")
+    if 'ffff:a.b.c.d' in ip.lower(): print("This is an IPv4 mapped to IPv6 address!")
+    if '::a.b.c.d' in ip.lower(): print("This is an embedded IPv4 address!")
+    print("\nFull IP - " + str(ip).strip(':'))
     
 
 if __name__ == '__main__':
