@@ -1,0 +1,8 @@
+# TG script to create a CSV file with the tag name, FQDN and IP of servers for sony. Saving for later.
+with open('solars_sony.csv','w+') as f:
+    for i in Server.selectBy(customerID=90005):
+        if 'solaris' in [str(item).lower() for item in i.getTags()]:
+            ip = None
+            if i.getAdditionalFQDNs(): ip = str(i.getAdditionalFQDNs()[0])
+            f.write("solaris,%s,%s" % (str(i.fqdn), ip))
+            f.write("\n")
