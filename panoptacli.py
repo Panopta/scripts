@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("action",nargs='?', default=None)
 parser.add_argument("endPoint",nargs='?', default=None)
 parser.add_argument("--data",nargs='?', type=str)
-
+parser.add_argument("--version", '-V', action='version', version='%(prog)s: v1.0')
 
 
 def apiCall(method, endPoint, payload=None):
