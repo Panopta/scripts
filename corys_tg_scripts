@@ -6,3 +6,19 @@ with open('solars_sony.csv','w+') as f:
             if i.getAdditionalFQDNs(): ip = str(i.getAdditionalFQDNs()[0])
             f.write("solaris,%s,%s" % (str(i.fqdn), ip))
             f.write("\n")
+
+# TG script to delete ping checks for all servers in a group, text key can be substituted for anything we have
+for i in Server.selectBy(server_group=274825):
+    for j in i.monitor_points:
+        if str(j.service_type.textkey) == 'icmp.ping': j.delete()
+
+# TG Script to find users that are using a specific option of a specific agent check
+count = 0
+for server in ServerResource.selectBy(status='active', check_method='resource.agent.panopta'):
+    check = server.loadMetadata()
+    if 'cpu_usage' in check['plugin_textkey']:
+        if "null" not in str(check['resource_option']) and "Total" not in str(check['resource_option']):
+            count = count + 1
+            print("Server with ID of %s is monitoring CPU percent on %s" % (str(server.id),str(check['resource_option'])))
+print("%s servers are monitoring specific CPUs!" % str(count))
+
