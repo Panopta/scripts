@@ -23,12 +23,15 @@ def cli(context, api_token, api_version):
 @cli.command()
 @click.option('--customer-keys',
               help='Comma-separated list of customer keys')
+@click.option('--dry-run', is_flag=True)
 @click.option('--fqdn-pattern',
               help='Pattern for matching Fully Qualified Domain Names')
 @click.option('--tags', help='Comma-separated list of tags')
 @click.pass_context
-def maintenance(context, customer_keys, fqdn_pattern, tags):
+def maintenance(context, customer_keys, dry_run, fqdn_pattern, tags):
     client = context.find_object(api_client.api_client)
+    if dry_run:
+        click.echo('DRY RUN')
 
     requests = []
     if customer_keys is not None:
@@ -52,4 +55,6 @@ def maintenance(context, customer_keys, fqdn_pattern, tags):
         servers = [server for server in servers
                    if re.search(fqdn_pattern, server['fqdn']) is not None]
 
-    click.echo([server['name'] for server in servers])
+    server_set = set([server['name'] for server in servers])
+    click.echo('Matching servers (' + str(len(server_set)) + '):')
+    click.echo(server_set)

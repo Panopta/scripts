@@ -47,9 +47,15 @@ class TestMaintenanceCommand(unittest.TestCase):
         result.exit_code.should.equal(0)
         len(self.mock_client.get_requests).should.equal(len(fake_keys))
 
-    @unittest.skip('TODO')
+    @unittest.skip('WIP')
     def test_invalid_customer_keys_are_noted_in_output(self):
-        pass
+        result = self.runner.invoke(panopta.maintenance,
+                                    ['--customer-keys',
+                                     '1,2,wrong'],
+                                    obj=self.mock_client)
+
+        result.exit_code.should.equal(0)
+        result.output.should.contain('Invalid customer key')
 
     def test_tags_are_added_to_every_request(self):
         result = self.runner.invoke(panopta.maintenance,
@@ -63,7 +69,6 @@ class TestMaintenanceCommand(unittest.TestCase):
         for request in self.mock_client.get_requests:
             request['query_params']['tags'].should.contain('TestTag')
 
-    @unittest.skip('WIP')
     def test_fqdn_pattern_filters_server_list(self):
         result = self.runner.invoke(panopta.maintenance,
                                     ['--customer-keys',
@@ -73,9 +78,14 @@ class TestMaintenanceCommand(unittest.TestCase):
                                     obj=self.mock_client)
 
         result.exit_code.should.equal(0)
-        result.output.should.contain('abc')
-        result.output.shouldnt.contain('xyz')
+        result.output.should.contain('one')
+        result.output.shouldnt.contain('two')
 
-    @unittest.skip('TODO')
     def test_dry_run_makes_no_post_requests(self):
-        pass
+        result = self.runner.invoke(panopta.maintenance,
+                                    ['--dry-run'],
+                                    obj=self.mock_client)
+
+        result.exit_code.should.equal(0)
+        result.output.should.contain('DRY RUN')
+        result.output.shouldnt.contain('Servers affected')
