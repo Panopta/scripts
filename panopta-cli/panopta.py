@@ -4,20 +4,20 @@ import re
 
 
 @click.group()
-@click.argument('token')
+@click.argument('api-token')
+@click.version_option()
 @click.option('--api-version',
               default=2,
-              help='The API version to use, default: "2"')
+              help='The API version to use. Default: 2')
 @click.pass_context
-def cli(context, token, api_version):
-    context.obj = {}
-    context.obj['client'] = api_client.api_client(
-        'https://api2.panopta-testing.com',
-        token,
-        version=api_version,
-        # TODO Add logging settings to options
-        log_level=api_client.LOG_DEBUG
-    )
+def cli(context, api_token, api_version):
+    '''Manage your Panopta account.'''
+
+    context.obj = api_client.api_client('https://api2.panopta-testing.com',
+                                        api_token,
+                                        version=api_version,
+                                        # TODO Add logging settings to options
+                                        log_level=api_client.LOG_DEBUG)
 
 
 @cli.command()
@@ -28,6 +28,8 @@ def cli(context, token, api_version):
 @click.option('--tags', help='Comma-separated list of tags')
 @click.pass_context
 def maintenance(context, customer_keys, fqdn_pattern, tags):
+    client = context.find_object(api_client.api_client)
+
     requests = []
     if customer_keys is not None:
         for key in customer_keys.split(','):
@@ -40,9 +42,8 @@ def maintenance(context, customer_keys, fqdn_pattern, tags):
         if tags is not None:
             query_params.update({'tags': tags})
 
-        response = context.obj['client'].get('server',
-                                             query_params=query_params)
-        if int(response['status_code']) is 200:
+        response = client.get('server', query_params=query_params)
+        if int(response['status_code']) == 200:
             servers.extend(response['response_data']['server_list'])
         else:
             pass  # TODO Should we notify them that some of the requests failed?
@@ -51,4 +52,4 @@ def maintenance(context, customer_keys, fqdn_pattern, tags):
         servers = [server for server in servers
                    if re.search(fqdn_pattern, server['fqdn']) is not None]
 
-    print([server['name'] for server in servers])
+    click.echo([server['name'] for server in servers])
