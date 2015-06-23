@@ -6,30 +6,47 @@ import unittest
 
 
 class MockClient(api_client.api_client):
+    INVALID_API_TOKEN = 'invalid-api-token'
+    INVALID_CUSTOMER_KEY = 'invalid-customer-key'
+
     def __init__(self):
+        self.api_token = 'valid-api-token'
         self.get_requests = []
 
     def get(self, __, **kwargs):
-        self.get_requests.append({'query_params': kwargs['query_params']})
+        if self.api_token == self.INVALID_API_TOKEN:
+            return {'status_code': 401,
+                    'status_reason': 'error: Authentication failed'}
+
+        query_params = kwargs['query_params']
+        self.get_requests.append({'query_params': query_params})
+
+        customer_key = query_params.get('partner_customer_key', None)
+        if customer_key == self.INVALID_CUSTOMER_KEY:
+            return {'status_code': 401,
+                    'status_reason': 'error: Invalid partner_customer_key'}
+
         return {'status_code': 200,
                 'status_reason': 'OK',
-                'response_headers': {"status": 200},
+                'response_headers': {'status': 200},
                 'response_data': {'server_list': [
                     {'name': 'one', 'fqdn': 'abc'},
                     {'name': 'two', 'fqdn': 'xyz'}
                 ]}}
 
 
-class TestPanoptaCommand(unittest.TestCase):
-    @unittest.skip('TODO')
-    def test_invalid_api_token_is_noted_in_output(self):
-        pass
-
-
 class TestMaintenanceCommand(unittest.TestCase):
     def setUp(self):
         self.mock_client = MockClient()
         self.runner = CliRunner()
+
+    def test_invalid_api_token_is_noted_in_output(self):
+        self.mock_client.api_token = MockClient.INVALID_API_TOKEN
+        result = self.runner.invoke(panopta.maintenance, obj=self.mock_client)
+
+        result.exit_code.should.equal(0)
+        result.output.should.contain('error: Authentication failed')
+        result.output.should.contain('Matching servers (0)')
 
     def test_with_no_options(self):
         result = self.runner.invoke(panopta.maintenance, obj=self.mock_client)
@@ -47,15 +64,15 @@ class TestMaintenanceCommand(unittest.TestCase):
         result.exit_code.should.equal(0)
         len(self.mock_client.get_requests).should.equal(len(fake_keys))
 
-    @unittest.skip('WIP')
     def test_invalid_customer_keys_are_noted_in_output(self):
         result = self.runner.invoke(panopta.maintenance,
                                     ['--customer-keys',
-                                     '1,2,wrong'],
+                                     MockClient.INVALID_CUSTOMER_KEY],
                                     obj=self.mock_client)
 
         result.exit_code.should.equal(0)
-        result.output.should.contain('Invalid customer key')
+        result.output.should.contain('error: Invalid partner_customer_key')
+        result.output.should.contain(MockClient.INVALID_CUSTOMER_KEY)
 
     def test_tags_are_added_to_every_request(self):
         result = self.runner.invoke(panopta.maintenance,

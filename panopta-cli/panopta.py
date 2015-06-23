@@ -46,15 +46,18 @@ def maintenance(context, customer_keys, dry_run, fqdn_pattern, tags):
             query_params.update({'tags': tags})
 
         response = client.get('server', query_params=query_params)
-        if int(response['status_code']) == 200:
+        status_code = int(response['status_code'])
+        if status_code == 200:
             servers.extend(response['response_data']['server_list'])
-        else:
-            pass  # TODO Should we notify them that some of the requests failed?
+        elif status_code == 401:
+            click.secho(response['status_reason'], fg='red')
+            if 'partner_customer_key' in response['status_reason']:
+                click.secho(query_params['partner_customer_key'], bold=True)
 
     if fqdn_pattern is not None:
         servers = [server for server in servers
                    if re.search(fqdn_pattern, server['fqdn']) is not None]
 
     server_set = set([server['name'] for server in servers])
-    click.echo('Matching servers (' + str(len(server_set)) + '):')
+    click.echo('\nMatching servers (' + str(len(server_set)) + '):')
     click.echo(server_set)
