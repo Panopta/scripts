@@ -36,3 +36,14 @@ for server in Server_ServerTemplate.selectBy(server_template=(Server.get(661995)
                 else: t.cancel()
 
 
+# Find customer account changes for servers with certain tags
+tags_list = ['aix','oracle']
+
+for i in CustomerLog.selectBy(customerID=90005):
+    if "server" in str(i.target_type):
+        try:
+            server = Server.get(i.target_id)
+            tags = [t.lower() for t in server.getTags()]
+            if 'aix' in tags and 'oracle' in tags: print("%s,%s,%s"% (str(i.timestamp),str(server.name),str(i.message)))
+        except: pass 
+
