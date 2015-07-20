@@ -47,3 +47,18 @@ for i in CustomerLog.selectBy(customerID=90005):
             if 'aix' in tags and 'oracle' in tags: print("%s,%s,%s"% (str(i.timestamp),str(server.name),str(i.message)))
         except: pass 
 
+
+# Generate heartbeat outage report for servers for a customer and excluding one high level group 
+#usage: pytg heartbeats.py $customerID $groupid
+try:
+  c = Customer.get(sys.argv[1])
+except:
+  c = Customer.selectBy(name=sys.argv[1])[0]
+
+group = str(ServerGroup.get(sys.argv[2]).name)
+
+for o in ActiveOutage.selectBy(customerID=c,status='confirmed'):
+    if 'heartbeat' in o.description.lower():
+        if group.lower() in str(o.server.server_group.get_nested_name().lower()): continue
+        else: print o.server.name
+
