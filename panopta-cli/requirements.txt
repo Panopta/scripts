@@ -1,0 +1,5 @@
+click==5.1
+Delorean==0.5.0
+#panopta_rest_api==1.0.1
+#-e ../../python-panopta-api-client/
+-e git+git@github.com:Panopta/python-panopta-api-client.git@transfer-to-its-own-repo#egg=panopta_rest_api
