@@ -15,7 +15,7 @@ import re
 def cli(context, api_token, api_version):
     '''Manage your Panopta account.'''
 
-    context.obj = api_client.api_client('https://api2.panopta-testing.com',
+    context.obj = api_client.api_client('https://api2.panopta.com',
                                         api_token,
                                         version=api_version,
                                         # TODO Add logging settings to options
