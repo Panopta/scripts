@@ -22,7 +22,7 @@ panopta your-api-token maintenance \
 
 The above example command will put servers for the customers with customer keys
 `customer-1` and `customer-2` that have a fully qualified domain name that ends
-in ".edu" and that have the tag "linux" applied them into a maintenance period
+in ".edu" and that have the tag "linux" applied to them into a maintenance period
 starting at 11:59pm on Christmas Eve until midnight on Christmas morning.
 
 ### Dry Run
@@ -37,26 +37,25 @@ panopta --help
 
 # Development
 ## Setup
-You must have [*python*](https://www.python.org/) (obviously),
+You must have [*python*](https://www.python.org/),
 [*git*](https://git-scm.com/), and
 [*virtualenv*](https://github.com/pypa/virtualenv) installed.
 
-1. Check out the *scripts* repository and enter the project directory:
-```bash
-git clone git@github.com:Panopta/scripts.git scripts && cd scripts/panopta-cli/ 
-```
+1. Check out the [*scripts*](https://github.com/Panopta/scripts) repository and enter the project directory:
+
+        git clone git@github.com:Panopta/scripts.git scripts && cd scripts/panopta-cli/
+
 2. Create a *virtualenv* environment:
-```bash
-virtualenv env
-```
+
+        virtualenv env
+
 3. Activate the environment:
-```bash
-source env/bin/activate
-```
+
+        source env/bin/activate
+
 4. Install the required development dependencies:
-```bash
-pip install --requirement dev-requirements.txt
-```
+
+        pip install --requirement dev-requirements.txt
 
 **Note**: You can name your virtual environment anything you like; it doesn't
 have to be `env`; you may want to name it after the version of Python you
