@@ -307,10 +307,13 @@ def import_into_pano(account):
 
 
 class Importer(object):
-    def __init__(self, api_host, api_key):
+    def __init__(self, api_host, api_key, no_verify=False):
         self.panopta_client = Client(api_key,
                                      host=api_host,
                                      version='2')
+        if no_verify:
+            # Override session object's verify attribute
+            self.panopta_client.session.verify = False
 
     def get_panopta_contact_groups(self):
         if DEBUG:
@@ -544,8 +547,9 @@ if __name__ == '__main__':
     parser.add_argument('server_csv', help='CSV file of servers to import. Named fields: Site, Site Group')
     parser.add_argument('contact_csv', help='CSV of contacts to import. Named fields: First_Name, Last_Name, Mobile, Email, Site Group')
     parser.add_argument('--host', dest='api_host', required=False, help="Host address of Panopta API (defaults to https://api2.panopta.com)")
-    parser.add_argument('--key', dest='api_key', required=True, help="Panopta API key to use for making requests.")
+    parser.add_argument('--key', dest='api_key', required=True, help="(REQUIRED) Panopta API key to use for making requests.")
     parser.add_argument('-nc', dest='concurrent', action='store_false', help="Do not use concurrent processing (much slower).")
+    parser.add_argument('-nv', dest='no_verify', action='store_true', help="Do not verify SSL certificates.")
     parser.add_argument('--just-count-csv', dest='csv_only', action='store_true', help="Just count the records in the CSV files and exit.")
     args = parser.parse_args()
     if args.verbose: DEBUG = True
@@ -556,6 +560,6 @@ if __name__ == '__main__':
         api_host = "https://api2.panopta.com"
         
     if args.concurrent:
-        Importer(api_host, args.api_key).import_all(args.server_csv, args.contact_csv, concurrent=True)
+        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv, concurrent=True)
     else:
-        Importer(api_host, args.api_key).import_all(args.server_csv, args.contact_csv)
+        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv)
