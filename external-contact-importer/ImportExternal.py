@@ -184,7 +184,7 @@ def import_into_pano(account):
                 print >>output, "CREATED SERVER GROUP: " + account.name
                 
             # Create new notification schedule
-            contact_events = {0: {'name': "External Contact Event",
+            contact_events = {600: {'name': "External Contact Event",
                                   'contacts': [account.panopta_contact_group['url']]}}
             payload = {'name': account.name, 'contact_events': contact_events, 'server_groups': [server_group_url]}
             r = client.post(client.url('notification_schedule'), headers={'content-type': 'application/json'}, json=payload)
