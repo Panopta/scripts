@@ -551,9 +551,11 @@ if __name__ == '__main__':
     parser.add_argument('-nc', dest='concurrent', action='store_false', help="Do not use concurrent processing (much slower).")
     parser.add_argument('-nv', dest='no_verify', action='store_true', help="Do not verify SSL certificates.")
     parser.add_argument('--just-count-csv', dest='csv_only', action='store_true', help="Just count the records in the CSV files and exit.")
+    parser.add_argument('--dev', dest='dev', action='store_true', help="Pad imported data with junk.")
     args = parser.parse_args()
     if args.verbose: DEBUG = True
     if args.csv_only: CSV_ONLY = True
+    if args.dev: DEV = True
     if args.api_host:
         api_host = args.api_host
     else:
