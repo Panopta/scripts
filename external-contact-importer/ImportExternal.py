@@ -15,6 +15,11 @@ from multiprocessing import Pool
 
 from panopta_api import Client
 
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 DEV = False
 DEBUG = False
 CSV_ONLY = False
