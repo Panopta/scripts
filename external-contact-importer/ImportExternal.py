@@ -376,7 +376,7 @@ class Importer(object):
         panopta_contact_groups = {}
         next_url = client.url('contact_group')
         while next_url:
-            r = client.get(next_url, params={'limit':20, 'full': 'true'})
+            r = client.get(next_url, params={'limit':50, 'full': 'true'})
             raise_if_err(r)
             j = r.json()
             for grp in j.get('contact_group_list', []):
@@ -409,13 +409,13 @@ class Importer(object):
         panopta_server_groups = {}
         next_url = client.url('server_group')
         while next_url:
-            r = client.get(next_url, params={'limit': 150, 'root_only': 'true'})
+            r = client.get(next_url, params={'limit': 50, 'root_only': 'true'})
             raise_if_err(r)
             j = r.json()
             for grp in j.get('server_group_list', []):
                 panopta_server_groups[grp['name']] = grp
                 server_group_id = grp['url'].split('/')[-1]
-                r = client.get(client.url('server'), params={'server_group': int(server_group_id)})
+                r = client.get(grp['url'] + '/server')
                 raise_if_err(r)
                 servers = r.json()['server_list']
                 panopta_server_groups[grp['name']]['servers'] = servers
