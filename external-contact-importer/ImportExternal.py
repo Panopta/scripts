@@ -12,12 +12,14 @@ import sys
 import traceback
 
 from multiprocessing import Pool
-
-from panopta_api import Client
+from urlparse import urljoin
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 
+# Turn off urllib3's warnings for cert validation so we can use -nv
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 DEV = False
@@ -32,17 +34,49 @@ def make_unicode(s):
     else:
         return s
 
-def raise_if_err(r):
+def raise_if_err(r, output=sys.stdout):
     try:
         r.raise_for_status()
     except requests.HTTPError as e:
-        print "\n---Exception occured---"
-        print "Request URL: %s" % e.request.url
-        print "Request body: %s" % e.request.body
-        print
-        traceback.print_exc()
+        print >>output, "\n---Exception occured---"
+        print >>output, "Request URL: %s" % e.request.url
+        print >>output, "Request body: %s" % e.request.body
+        print >>output, " "
+        traceback.print_exc(file=output)
         raise
 
+class Client(object):
+    VERBS = ('delete', 'get', 'post', 'put')
+    
+    def __init__(self, token, host='https://api2.panopta.com', version='2'):
+        self.session = requests.Session()
+        retries = Retry(total=5,
+                        backoff_factor=0.1,
+                        status_forcelist=[ 500, 502, 503, 504 ])
+        self.base_url = urljoin(host, 'v' + version)
+        self.session.mount(self.base_url, HTTPAdapter(max_retries=retries))
+        self.session.auth = PanoptaAuth(token)
+        self.session.headers.update({'Accept': 'application/json', 'User-Agent': 'Panopta Importer'})
+
+    def url(self, *path_parts):
+        return '/'.join([self.base_url] + [part.strip('/') for part in path_parts])
+
+    def __getattr__(self, name):
+        if name in self.VERBS:
+            def wrapper(*args, **kwargs):
+                return getattr(self.session, name)(*args, **kwargs)
+            return wrapper
+        else:
+            return object.__getattr_(self, name)
+
+
+class PanoptaAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, request):
+        request.headers.update({'Authorization': 'ApiKey %s' % self.token})
+        return request 
 
 class Contact(object):
     def __init__(self, name, cells=None, emails=None):
@@ -165,7 +199,7 @@ def import_into_pano(account):
         #         # Delete contact
         #         r = client.delete(pano_contact.pano_url)
         #         if r.status_code != 404:
-        #             raise_if_err(r)
+        #             raise_if_err(r, output)
         #         if DEBUG:
         #             print >>output, "DELETED: " + pano_contact.name
         #         deleted_contacts += 1
@@ -173,10 +207,10 @@ def import_into_pano(account):
         if not account.panopta_contact_group:
             payload = {'contact_list': [], 'name': account.name}
             r = client.post(client.url('contact_group'), headers={'content-type': 'application/json'}, json=payload)
-            raise_if_err(r)
+            raise_if_err(r, output)
             group_url = r.headers['location']
             r = client.get(group_url)
-            raise_if_err(r)
+            raise_if_err(r, output)
             account.panopta_contact_group = r.json()
 
             counters['new_contact_groups'] += 1
@@ -189,10 +223,10 @@ def import_into_pano(account):
             had_server_group = False
             payload = {'name': account.name}
             r = client.post(client.url('server_group'), headers={'content-type': 'application/json'}, json=payload)
-            raise_if_err(r)
+            raise_if_err(r, output)
             server_group_url = r.headers['location']
             r = client.get(server_group_url)
-            raise_if_err(r)
+            raise_if_err(r, output)
             account.panopta_server_group = r.json()
             account.panopta_server_group['servers'] = []
 
@@ -202,10 +236,12 @@ def import_into_pano(account):
                 
             # Create new notification schedule
             contact_events = {600: {'name': "External Contact Event",
-                                  'contacts': [account.panopta_contact_group['url']]}}
+                                  'contacts': [account.panopta_contact_group['url']],
+                                  'email_message': "",
+                                  'text_message': ""}}
             payload = {'name': account.name, 'contact_events': contact_events, 'server_groups': [server_group_url]}
             r = client.post(client.url('notification_schedule'), headers={'content-type': 'application/json'}, json=payload)
-            raise_if_err(r)
+            raise_if_err(r, output)
             notif_sched = r.headers['location']
             counters['new_scheds'] += 1
             if DEBUG:
@@ -215,7 +251,7 @@ def import_into_pano(account):
             payload = {'name': account.name,
                        'notification_schedule': notif_sched}
             r = client.put(server_group_url, headers={'content-type': 'application/json'}, json=payload)
-            raise_if_err(r)
+            raise_if_err(r, output)
 
         # Add servers
         for crm_server_name in account.crm_servers:
@@ -223,7 +259,7 @@ def import_into_pano(account):
             if crm_server_name not in panopta_server_names:
                 payload = {'name': crm_server_name, 'fqdn': crm_server_name, 'server_group': account.panopta_server_group['url']}
                 r = client.post(client.url('server'), headers={'content-type': 'application/json'}, json=payload)
-                raise_if_err(r)
+                raise_if_err(r, output)
                 new_url = r.headers['location']
 
                 counters['new_servers'] += 1
@@ -247,11 +283,11 @@ def import_into_pano(account):
                     match = matching_contacts[0]
                     # payload = {"name": match.name, "timezone": client.url('timezone/America/Chicago'), "external": True}
                     # r = client.put(match.pano_url, headers={'content-type': 'application/json'}, json=payload)
-                    # raise_if_err(r)
+                    # raise_if_err(r, output)
 
                     # We need to get the existing contact infos to know their urls
                     r = client.get(match.pano_url + "/contact_info")
-                    raise_if_err(r)
+                    raise_if_err(r, output)
                     pano_contact_info = r.json()['contact_info_list']
 
                     # Remove deleted emails
@@ -260,13 +296,13 @@ def import_into_pano(account):
                         for ci in pano_contact_info:
                             if ci['detail'] == delete_email:
                                 r = client.delete(ci['url'])
-                                raise_if_err(r)
+                                raise_if_err(r, output)
                     # Add new emails
                     emails_to_add = crm_contact.emails - match.emails
                     for add_email in emails_to_add:
                         payload = {'type': email_type, 'info': add_email}
                         r = client.post(match.pano_url + '/contact_info', headers={'content-type': 'application/json'}, json=payload)
-                        raise_if_err(r)
+                        raise_if_err(r, output)
 
                     # Remove deleted cell numbers
                     cells_to_remove = match.cells - crm_contact.cells
@@ -275,13 +311,13 @@ def import_into_pano(account):
                             just_nums = make_unicode(re.sub(r'[^\d]+', '', ci['detail']))
                             if just_nums == delete_cell:
                                 r = client.delete(ci['url'])
-                                raise_if_err(r)
+                                raise_if_err(r, output)
                     # Add new cells
                     cells_to_add = crm_contact.cells - match.cells
                     for add_cell in cells_to_add:
                         payload = {'type': sms_type, 'info': add_cell}
                         r = client.post(match.pano_url + '/contact_info', headers={'content-type': 'application/json'}, json=payload)
-                        raise_if_err(r)
+                        raise_if_err(r, output)
 
                     counters['updated_contacts'] += 1
                     if DEBUG:
@@ -290,23 +326,23 @@ def import_into_pano(account):
                     # Add brand new contact
                     payload = {'name': crm_contact.name, 'timezone': client.url('timezone/America/Chicago'), 'external': 'true'}
                     r = client.post(client.url('contact'), headers={'content-type': 'application/json'}, json=payload)
-                    raise_if_err(r)
+                    raise_if_err(r, output)
                     new_contact_url = r.headers['location']
                     for email in crm_contact.emails:
                         payload = {'type': email_type, 'info': email}
                         r = client.post(new_contact_url + '/contact_info', headers={'content-type': 'application/json'}, json=payload)
-                        raise_if_err(r)
+                        raise_if_err(r, output)
                     for cell in crm_contact.cells:
                         payload = {'type': sms_type, 'info': cell}
                         r = client.post(new_contact_url + '/contact_info', headers={'content-type': 'application/json'}, json=payload)
-                        raise_if_err(r)
+                        raise_if_err(r, output)
                     # Add new contact to contact group
                     if account.panopta_contact_group:
                         existing_contact_urls = [c.pano_url for c in account.panopta_contact_group['contact_list']]
                         new_contact_urls = existing_contact_urls + [new_contact_url]
                         payload = {'name': account.panopta_contact_group['name'], 'contact_list': new_contact_urls}
                         r = client.put(account.panopta_contact_group['url'], headers={'content-type': 'application/json'}, json=payload)
-                        raise_if_err(r)
+                        raise_if_err(r, output)
                         # We need to add our new contact to the local list for future checks
                         new_contact = copy.deepcopy(crm_contact)
                         new_contact.pano_url = new_contact_url

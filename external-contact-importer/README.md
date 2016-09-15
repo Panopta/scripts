@@ -2,7 +2,7 @@
 
 ## Prerequisites
 * Python >= 2.7.9 and < 3
-* `panopta-api` from PyPi
+* `requests` from PyPi
 
 ## Usage
 ```
