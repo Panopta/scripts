@@ -38,6 +38,7 @@ def raise_if_err(r, output=sys.stdout):
     try:
         r.raise_for_status()
     except requests.HTTPError as e:
+        output = sys.stdout
         print >>output, "\n---Exception occured---"
         print >>output, "Request URL: %s" % e.request.url
         print >>output, "Request body: %s" % e.request.body
