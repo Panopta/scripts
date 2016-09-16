@@ -247,9 +247,10 @@ def import_into_pano(account):
             if DEBUG:
                 print >>output, "NEW SCHEDULE: " + account.name
                 
-            # Now add it to server group (can't seem to do this from above POST)
+            # Now add it to the server group's auxiliary schedules (can't seem to do this from above POST)
+            aux_scheds = {'network_outages': [notif_sched]}
             payload = {'name': account.name,
-                       'notification_schedule': notif_sched}
+                       'auxiliary_notification': aux_scheds}
             r = client.put(server_group_url, headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
 
