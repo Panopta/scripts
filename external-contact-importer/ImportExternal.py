@@ -163,13 +163,14 @@ class Contact(object):
 
 
 class AccountMap(object):
-    def __init__(self, pano_client, name, crm_servers, crm_contacts, panopta_server_group, panopta_contact_group):
+    def __init__(self, pano_client, name, crm_servers, crm_contacts, panopta_server_group, panopta_contact_group, intern_sched_id):
         self.pano_client = pano_client
         self.name = name
         self.crm_servers = crm_servers
         self.crm_contacts = crm_contacts
         self.panopta_server_group = panopta_server_group
         self.panopta_contact_group = panopta_contact_group
+        self.intern_sched_id = intern_sched_id
 
 
 def import_into_pano(account):
@@ -235,12 +236,12 @@ def import_into_pano(account):
             if DEBUG:
                 print >>output, "CREATED SERVER GROUP: " + account.name
                 
-            # Create new notification schedule
+            # Create new notification schedule for internal contacts
             contact_events = {600: {'name': "External Contact Event",
                                   'contacts': [account.panopta_contact_group['url']],
                                   'email_message': "",
                                   'text_message': ""}}
-            payload = {'name': account.name, 'contact_events': contact_events, 'server_groups': [server_group_url]}
+            payload = {'name': account.name, 'contact_events': contact_events}
             r = client.post(client.url('notification_schedule'), headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
             notif_sched = r.headers['location']
@@ -248,12 +249,22 @@ def import_into_pano(account):
             if DEBUG:
                 print >>output, "NEW SCHEDULE: " + account.name
                 
-            # Now add it to the server group's auxiliary schedules (can't seem to do this from above POST)
-            aux_scheds = {'network_outages': [notif_sched]}
+            # Add the already exisiting internal schedule to the main slot
+            int_sched_url = client.url('notification_schedule/' + str(account.intern_sched_id))
             payload = {'name': account.name,
-                       'auxiliary_notification': aux_scheds}
+                       'notification_schedule': int_sched_url}
             r = client.put(server_group_url, headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
+        else:
+            r = client.get(client.url('notification_schedule'), params={'name': account.name})
+            raise_if_err(r, output)
+            j = r.json() 
+
+            results = j['notification_schedule_list']
+            if len(results) > 0:
+                notif_sched = results[0]['url']
+            elif DEBUG:
+                print >>output, "No external schedule found for group %s so none being added." % account.name
 
         # Add servers
         for crm_server_name in account.crm_servers:
@@ -263,6 +274,13 @@ def import_into_pano(account):
                 r = client.post(client.url('server'), headers={'content-type': 'application/json'}, json=payload)
                 raise_if_err(r, output)
                 new_url = r.headers['location']
+
+                # If we have a configured external notification schedule, add it to auxiliary
+                if notif_sched:
+                    payload = {'name': crm_server_name, 'fqdn': crm_server_name, 'server_group': account.panopta_server_group['url'],
+                               'auxiliary_notification': {'network_outages': [notif_sched]}}
+                    r = client.put(new_url, json=payload)
+                    raise_if_err(r, output)
 
                 counters['new_servers'] += 1
                 if DEBUG:
@@ -520,7 +538,7 @@ class Importer(object):
             print "{0:<30} {1:>6}".format("Servers in CSV:", servers) + "\n"
         return crm_server_groups
 
-    def import_all(self, server_csv, contact_csv, concurrent=False):
+    def import_all(self, server_csv, contact_csv, intern_sched_id, concurrent=False):
         start_time = datetime.datetime.now()
         print "Starting sync at {}...".format(datetime.datetime.now())
         client = self.panopta_client
@@ -560,7 +578,8 @@ class Importer(object):
             else:
                 crm_contacts = []
 
-            new_acc_map = AccountMap(client, server_group, servers, crm_contacts, panopta_server_group, panopta_contact_group)
+            intern_sched_id = int(intern_sched_id)
+            new_acc_map = AccountMap(client, server_group, servers, crm_contacts, panopta_server_group, panopta_contact_group, intern_sched_id)
             account_maps += [new_acc_map]
 
         if concurrent:
@@ -601,6 +620,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', dest='verbose', action='store_true', help="Produce verbose output.")
     parser.add_argument('server_csv', help='CSV file of servers to import. Named fields: Site, Site Group')
     parser.add_argument('contact_csv', help='CSV of contacts to import. Named fields: First_Name, Last_Name, Mobile, Email, Site Group')
+    parser.add_argument('internal_sched_id', help='Numeric id of Notification Schedule used for internal contacts.')
     parser.add_argument('--host', dest='api_host', required=False, help="Host address of Panopta API (defaults to https://api2.panopta.com)")
     parser.add_argument('--key', dest='api_key', required=True, help="(REQUIRED) Panopta API key to use for making requests.")
     parser.add_argument('-nc', dest='concurrent', action='store_false', help="Do not use concurrent processing (much slower).")
@@ -617,6 +637,6 @@ if __name__ == '__main__':
         api_host = "https://api2.panopta.com"
         
     if args.concurrent:
-        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv, concurrent=True)
+        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv, args.internal_sched_id, concurrent=True)
     else:
-        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv)
+        Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.internal_sched_id, args.contact_csv)
