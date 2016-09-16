@@ -6,26 +6,30 @@
 
 ## Usage
 ```
-usage: ImportExternal.py [-h] [-v] [--host API_HOST] --key API_KEY [-nc]
-                         [--just-count-csv]
-                         server_csv contact_csv
+usage: ImportExternal.py [-h] [-v] [--host API_HOST] --key API_KEY [-nc] [-nv]
+                         [--just-count-csv] [--dev]
+                         server_csv contact_csv internal_sched_id
 
 Import external contacts into Panopta.
 
 positional arguments:
-  server_csv        CSV file of servers to import. Named fields: Site, Site
-                    Group
-  contact_csv       CSV of contacts to import. Named fields: First_Name,
-                    Last_Name, Mobile, Email, Site Group
+  server_csv         CSV file of servers to import. Named fields: Site, Site
+                     Group
+  contact_csv        CSV of contacts to import. Named fields: First_Name,
+                     Last_Name, Mobile, Email, Site Group
+  internal_sched_id  Numeric id of Notification Schedule used for internal
+                     contacts.
 
 optional arguments:
-  -h, --help        show this help message and exit
-  -v                Produce verbose output.
-  --host API_HOST   Host address of Panopta API (defaults to
-                    https://api2.panopta.com)
-  --key API_KEY     Panopta API key to use for making requests.
-  -nc               Do not use concurrent processing (much slower).
-  --just-count-csv  Just count the records in the CSV files and exit.
+  -h, --help         show this help message and exit
+  -v                 Produce verbose output.
+  --host API_HOST    Host address of Panopta API (defaults to
+                     https://api2.panopta.com)
+  --key API_KEY      (REQUIRED) Panopta API key to use for making requests.
+  -nc                Do not use concurrent processing (much slower).
+  -nv                Do not verify SSL certificates.
+  --just-count-csv   Just count the records in the CSV files and exit.
+  --dev              Pad imported data with junk.
 ```
 
 ## CSV Formatting
