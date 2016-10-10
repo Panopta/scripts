@@ -467,7 +467,6 @@ class Importer(object):
                     match = re.match(SITE_GROUP_RE, site_group)
                     if match:
                         site_group = make_unicode(match.group(1) + "-" + match.group(2))
-                        print site_group
                     else:
                         sys.stdout.write("Unkown site group format: %s" % site_group)
                 if site_group in crm_accounts:
