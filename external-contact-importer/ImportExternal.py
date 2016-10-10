@@ -22,10 +22,13 @@ from requests.adapters import HTTPAdapter
 # Turn off urllib3's warnings for cert validation so we can use -nv
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+NO_STRIP = False
 DEV = False
 DEBUG = False
 CSV_ONLY = False
 NUM_PROCS = 4
+
+SITE_GROUP_RE = re.compile("^([0-9]+)\-(?:[\w\:]+\/{1,2})?([\w\.\-\/]+?)\/?#?$")
 
 def make_unicode(s):
     if type(s) != unicode:
@@ -460,6 +463,13 @@ class Importer(object):
             for row in reader:
                 full_name = make_unicode(" ".join([row['First_Name'], row['Last_Name']]).strip())
                 site_group = make_unicode(row['Site Group'])
+                if not NO_STRIP:
+                    match = re.match(SITE_GROUP_RE, site_group)
+                    if match:
+                        site_group = make_unicode(match.group(1) + "-" + match.group(2))
+                        print site_group
+                    else:
+                        sys.stdout.write("Unkown site group format: %s" % site_group)
                 if site_group in crm_accounts:
                     existing_contacts = [c for c in crm_accounts[site_group] if c.name == full_name]
                     if len(existing_contacts) > 0:
@@ -626,10 +636,12 @@ if __name__ == '__main__':
     parser.add_argument('-nc', dest='concurrent', action='store_false', help="Do not use concurrent processing (much slower).")
     parser.add_argument('-nv', dest='no_verify', action='store_true', help="Do not verify SSL certificates.")
     parser.add_argument('--just-count-csv', dest='csv_only', action='store_true', help="Just count the records in the CSV files and exit.")
+    parser.add_argument('--no-strip', dest='no_strip', action='store_true', help="Don't strip protocol from incoming Site Groups.")
     parser.add_argument('--dev', dest='dev', action='store_true', help="Pad imported data with junk.")
     args = parser.parse_args()
     if args.verbose: DEBUG = True
     if args.csv_only: CSV_ONLY = True
+    if args.no_strip: NO_STRIP = True
     if args.dev: DEV = True
     if args.api_host:
         api_host = args.api_host
