@@ -23,6 +23,7 @@ from requests.adapters import HTTPAdapter
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 NO_STRIP = False
+PARENT_GROUP = None
 DEV = False
 DEBUG = False
 CSV_ONLY = False
@@ -227,6 +228,9 @@ def import_into_pano(account):
         if not account.panopta_server_group:
             had_server_group = False
             payload = {'name': account.name}
+            if PARENT_GROUP:
+                pg_url = client.url('server_group' + '/%s' % str(PARENT_GROUP))
+                payload.update({'server_group': pg_url})
             r = client.post(client.url('server_group'), headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
             server_group_url = r.headers['location']
@@ -245,6 +249,8 @@ def import_into_pano(account):
                                   'email_message': "",
                                   'text_message': ""}}
             payload = {'name': account.name, 'contact_events': contact_events}
+            if PARENT_GROUP:
+                payload.update({'server_group': pg_url})
             r = client.post(client.url('notification_schedule'), headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
             notif_sched = r.headers['location']
@@ -256,6 +262,8 @@ def import_into_pano(account):
             int_sched_url = client.url('notification_schedule/' + str(account.intern_sched_id))
             payload = {'name': account.name,
                        'notification_schedule': int_sched_url}
+            if PARENT_GROUP:
+                payload.update({'server_group': pg_url})
             r = client.put(server_group_url, headers={'content-type': 'application/json'}, json=payload)
             raise_if_err(r, output)
         else:
@@ -632,6 +640,7 @@ if __name__ == '__main__':
     parser.add_argument('internal_sched_id', help='Numeric id of Notification Schedule used for internal contacts.')
     parser.add_argument('--host', dest='api_host', required=False, help="Host address of Panopta API (defaults to https://api2.panopta.com)")
     parser.add_argument('--key', dest='api_key', required=True, help="(REQUIRED) Panopta API key to use for making requests.")
+    parser.add_argument('--parent-group', dest='parent_group', required=False, help="Numeric id of server group to import under.")
     parser.add_argument('-nc', dest='concurrent', action='store_false', help="Do not use concurrent processing (much slower).")
     parser.add_argument('-nv', dest='no_verify', action='store_true', help="Do not verify SSL certificates.")
     parser.add_argument('--just-count-csv', dest='csv_only', action='store_true', help="Just count the records in the CSV files and exit.")
@@ -646,7 +655,8 @@ if __name__ == '__main__':
         api_host = args.api_host
     else:
         api_host = "https://api2.panopta.com"
-        
+    if args.parent_group:
+        PARENT_GROUP = int(args.parent_group)
     if args.concurrent:
         Importer(api_host, args.api_key, no_verify=args.no_verify).import_all(args.server_csv, args.contact_csv, args.internal_sched_id, concurrent=True)
     else:
