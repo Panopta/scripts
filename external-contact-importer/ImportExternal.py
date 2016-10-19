@@ -29,7 +29,7 @@ DEBUG = False
 CSV_ONLY = False
 NUM_PROCS = 4
 
-SITE_GROUP_RE = re.compile("^([0-9]+)\-(?:[\w\:]+\/{1,2})?([\w\.\-\/]+?)\/?#?$")
+SITE_GROUP_RE = re.compile("^([0-9]+)\-(?:[\w\:]+\/{1,2})?([\w\.\-]+)(?:\/.*)?$")
 
 def make_unicode(s):
     if type(s) != unicode:
@@ -474,7 +474,9 @@ class Importer(object):
                 if not NO_STRIP:
                     match = re.match(SITE_GROUP_RE, site_group)
                     if match:
-                        site_group = make_unicode(match.group(1) + "-" + match.group(2))
+                        domain = match.group(2)
+                        domain = domain.split(".")[-2] + "." + domain.split(".")[-1]
+                        site_group = make_unicode(match.group(1) + "-" + domain)
                     else:
                         sys.stdout.write("Unkown site group format: %s" % site_group)
                 if site_group in crm_accounts:
@@ -538,7 +540,14 @@ class Importer(object):
             for row in reader:
                 new_server = make_unicode(row['Site'])
                 new_server_group = make_unicode(row['Site Group'])
-
+                if not NO_STRIP:
+                    match = re.match(SITE_GROUP_RE, new_server_group)
+                    if match:
+                        domain = match.group(2)
+                        domain = domain.split(".")[-2] + "." + domain.split(".")[-1]
+                        new_server_group = make_unicode(match.group(1) + "-" + domain)
+                    else:
+                        sys.stdout.write("Unkown site group format: %s" % new_server_group)
                 if new_server_group in crm_server_groups:
                     crm_server_groups[new_server_group] += [new_server]
                     servers += 1
