@@ -467,7 +467,9 @@ class Importer(object):
         cells = 0
         crm_accounts = {}
         with open(csv_filename, 'rb') as csvfile:
-            reader = csv.DictReader(csvfile)
+            dialect = csv.Sniffer().sniff(csvfile.read())
+            csvfile.seek(0)
+            reader = csv.DictReader(csvfile, dialect=dialect)
             for row in reader:
                 full_name = make_unicode(" ".join([row['First_Name'], row['Last_Name']]).strip())
                 site_group = make_unicode(row['Site Group'])
@@ -536,7 +538,9 @@ class Importer(object):
         servers = 0
         crm_server_groups = {}
         with open(server_csv, 'rb') as csvfile:
-            reader = csv.DictReader(csvfile)
+            dialect = csv.Sniffer().sniff(csvfile.read())
+            csvfile.seek(0)
+            reader = csv.DictReader(csvfile, dialect=dialect)
             for row in reader:
                 new_server = make_unicode(row['Site'])
                 new_server_group = make_unicode(row['Site Group'])
