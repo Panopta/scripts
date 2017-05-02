@@ -34,6 +34,7 @@ optional arguments:
 
 ## CSV Formatting
 The script expects two csv files: one for sites to import, one for contacts.
+Any delimiter may be used within each file. The script relies on Python's csv library dialect-sniffing ability to detect it automatically.
 Each file is expected to have the first line label the fields *exactly* as described in Usage. (If exporting from Excel, the first row can be a title row.)
 Field ordering and extra fields are unimportant. Only fields that match the exact naming scheme above will be considered.
 
